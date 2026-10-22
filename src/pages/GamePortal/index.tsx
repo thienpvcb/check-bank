@@ -14,6 +14,8 @@ import dayjs from 'dayjs';
 import {
   gamePlatforms, mockLinkedPlatforms, mockPlatformTransactions,
 } from '../../mocks/games';
+import { gamePortalApi } from '../../services/api';
+import { USE_API } from '../../hooks/useApi';
 import type {
   GamePlatform, LinkedPlatform, PlatformTransaction,
   PlatformCurrency, PlatformTxType,
@@ -239,8 +241,16 @@ const GamePortalPage = () => {
   const exRate = useExchangeRate();
   const minVnd = usdtToVnd(MIN_USDT, exRate.rate);
 
+  const [platforms, setPlatforms] = useState<GamePlatform[]>(gamePlatforms);
   const [linkedList, setLinkedList] = useState<LinkedPlatform[]>(mockLinkedPlatforms);
-  const [txHistory, setTxHistory] = useState<PlatformTransaction[]>(mockPlatformTransactions);
+  const [txHistory, setTxHistory]   = useState<PlatformTransaction[]>(mockPlatformTransactions);
+
+  useEffect(() => {
+    if (!USE_API) return;
+    gamePortalApi.platforms().then(setPlatforms).catch(() => {});
+    gamePortalApi.myLinks().then(setLinkedList).catch(() => {});
+    gamePortalApi.txHistory().then(setTxHistory).catch(() => {});
+  }, []);
 
   // Link modal
   const [linkTarget, setLinkTarget] = useState<GamePlatform | null>(null);
@@ -264,30 +274,38 @@ const GamePortalPage = () => {
   const getLinked = (platformId: string) => linkedList.find((l) => l.platformId === platformId);
 
   // ── Link platform ──
-  const handleLink = (values: { domain: string; apiKey: string }) => {
+  const handleLink = async (values: { domain: string; apiKey: string }) => {
     if (!linkTarget) return;
-    const newLink: LinkedPlatform = {
-      id: `link-${Date.now()}`,
-      platformId: linkTarget.id,
-      platformName: linkTarget.name,
-      domain: values.domain || linkTarget.domain,
-      apiKey: `${linkTarget.id.slice(0, 2)}_live_*************${values.apiKey.slice(-4)}`,
-      linkedAt: new Date().toISOString(),
-      status: 'active',
-    };
-    setLinkedList((p) => [...p, newLink]);
-    message.success(`Đã liên kết ${linkTarget.name} thành công!`);
-    setLinkTarget(null);
-    linkForm.resetFields();
+    if (USE_API) {
+      try {
+        const link = await gamePortalApi.link({ platformId: linkTarget.id, domain: values.domain || linkTarget.domain, apiKey: values.apiKey });
+        setLinkedList((p) => [...p, link]);
+        message.success(`Đã liên kết ${linkTarget.name} thành công!`);
+        setLinkTarget(null); linkForm.resetFields();
+      } catch (err) { message.error((err as Error).message); }
+    } else {
+      const newLink: LinkedPlatform = {
+        id: `link-${Date.now()}`,
+        platformId: linkTarget.id, platformName: linkTarget.name,
+        domain: values.domain || linkTarget.domain,
+        apiKey: `${linkTarget.id.slice(0, 2)}_live_*************${values.apiKey.slice(-4)}`,
+        linkedAt: new Date().toISOString(), status: 'active',
+      };
+      setLinkedList((p) => [...p, newLink]);
+      message.success(`Đã liên kết ${linkTarget.name} thành công!`);
+      setLinkTarget(null); linkForm.resetFields();
+    }
   };
 
   const handleUnlink = (platform: GamePlatform) => {
     Modal.confirm({
       title: `Hủy liên kết ${platform.name}?`,
-      content: 'Sau khi hủy liên kết, bạn sẽ không thể nạp/rút qua nhà cái này cho đến khi liên kết lại.',
-      okText: 'Hủy liên kết', okButtonProps: { danger: true },
-      cancelText: 'Đóng',
-      onOk: () => {
+      content: 'Sau khi hủy liên kết, bạn sẽ không thể nạp/rút qua nhà cái này.',
+      okText: 'Hủy liên kết', okButtonProps: { danger: true }, cancelText: 'Đóng',
+      onOk: async () => {
+        if (USE_API) {
+          try { await gamePortalApi.unlink(platform.id); } catch { /* ignore */ }
+        }
         setLinkedList((p) => p.filter((l) => l.platformId !== platform.id));
         message.info(`Đã hủy liên kết ${platform.name}`);
       },
@@ -307,45 +325,64 @@ const GamePortalPage = () => {
   };
 
   // ── Step 1: submit form → generate OTP ──
-  const handleTxFormSubmit = (values: { userId: string; username: string; amount: number }) => {
+  const handleTxFormSubmit = async (values: { userId: string; username: string; amount: number }) => {
     setPendingTxData(values);
-    const otp = generateOTP();
-    setCurrentOTP(otp);
+    if (USE_API && txPlatform) {
+      try {
+        const res = await gamePortalApi.initTransaction({
+          platformId: txPlatform.id, type: txType,
+          currency: txCurrency, userId: values.userId,
+          username: values.username, amount: values.amount,
+        });
+        setCurrentOTP(res.otp);
+        message.info({ content: `OTP: ${res.otp} (${res.otpExpiresIn}s)`, duration: 6 });
+      } catch (err) { message.error((err as Error).message); return; }
+    } else {
+      const otp = generateOTP();
+      setCurrentOTP(otp);
+      message.info({ content: `OTP đã được tạo: ${otp} (demo)`, duration: 6 });
+    }
     setOtpExpired(false);
     setOtpInput('');
     otpKey.current += 1;
     setTxStep('otp');
-    // In real system OTP would be sent to email/SMS
-    message.info({ content: `OTP đã được tạo: ${otp} (hiển thị cho demo)`, duration: 6 });
   };
 
   // ── Step 2: verify OTP → complete ──
-  const handleOTPVerify = () => {
+  const handleOTPVerify = async () => {
     if (otpExpired) { message.error('OTP đã hết hạn. Vui lòng tạo lại.'); return; }
     if (otpInput !== currentOTP) { message.error('OTP không đúng. Thử lại.'); return; }
+    if (!txPlatform || !pendingTxData) return;
 
     setTxLoading(true);
-    setTimeout(() => {
-      if (!txPlatform || !pendingTxData) return;
-      const tx: PlatformTransaction = {
-        id: `PTX${Date.now()}`,
-        platformId: txPlatform.id,
-        platformName: txPlatform.name,
-        type: txType,
-        currency: txCurrency,
-        amount: pendingTxData.amount,
-        userId: pendingTxData.userId,
-        username: pendingTxData.username,
-        otp: currentOTP,
-        status: 'completed',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+    try {
+      let tx: PlatformTransaction;
+      if (USE_API) {
+        tx = await gamePortalApi.confirmTransaction({
+          txId: `PTX${Date.now()}`, platformId: txPlatform.id,
+          type: txType, currency: txCurrency,
+          userId: pendingTxData.userId, username: pendingTxData.username,
+          amount: pendingTxData.amount, otp: otpInput,
+        });
+      } else {
+        tx = {
+          id: `PTX${Date.now()}`,
+          platformId: txPlatform.id, platformName: txPlatform.name,
+          type: txType, currency: txCurrency,
+          amount: pendingTxData.amount,
+          userId: pendingTxData.userId, username: pendingTxData.username,
+          otp: currentOTP, status: 'completed',
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        };
+      }
       setTxHistory((p) => [tx, ...p]);
       setFinalTx(tx);
       setTxStep('success');
+    } catch (err) {
+      message.error((err as Error).message);
+    } finally {
       setTxLoading(false);
-    }, 800);
+    }
   };
 
   const resetTxModal = () => {
@@ -723,7 +760,7 @@ const GamePortalPage = () => {
           label: <span><AppstoreOutlined /> Nhà cái ({gamePlatforms.length})</span>,
           children: (
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${colCount}, 1fr)`, gap: 14 }}>
-              {gamePlatforms.map((p) => (
+              {platforms.map((p) => (
                 <PlatformCard
                   key={p.id} platform={p}
                   linked={getLinked(p.id)}

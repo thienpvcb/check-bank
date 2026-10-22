@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Form, Input, InputNumber, Select, Button, Typography, Alert,
-  Modal, Descriptions, Grid, Tag,
+  Modal, Descriptions, Grid, Tag, message,
 } from 'antd';
 import {
   WalletOutlined, BankOutlined, ExclamationCircleOutlined,
@@ -11,8 +11,11 @@ import {
 import { CryptoIcon, BankIcon, CryptoSymbolIcon } from '../../components/Icons';
 import ExchangeRateBadge from '../../components/ExchangeRateBadge';
 import { useNavigate } from 'react-router-dom';
-import { cryptoAssets, getUniqueSymbols } from '../../mocks/crypto';
+import { cryptoAssets } from '../../mocks/crypto';
 import { getActiveBanks } from '../../mocks/banks';
+import { referenceApi, transactionApi } from '../../services/api';
+import { USE_API } from '../../hooks/useApi';
+import type { CryptoAsset, Bank } from '../../types';
 import { useExchangeRate, MIN_USDT, usdtToVnd } from '../../hooks/useExchangeRate';
 
 const { Title, Text } = Typography;
@@ -43,42 +46,64 @@ const WithdrawPage = () => {
   const exRate = useExchangeRate();
   const minVnd = usdtToVnd(MIN_USDT, exRate.rate);
 
-  const banks = getActiveBanks();
-  const symbols = getUniqueSymbols();
-  const getNetworks = (sym: string) => cryptoAssets.filter((a) => a.symbol === sym);
-  const currentAsset = cryptoAssets.find((a) => a.symbol === selectedSymbol && a.network === selectedNetwork);
+  const [allCrypto, setAllCrypto] = useState<CryptoAsset[]>(cryptoAssets);
+  const [allBanks, setAllBanks]   = useState<Bank[]>(getActiveBanks());
+
+  useEffect(() => {
+    if (!USE_API) return;
+    referenceApi.crypto().then(setAllCrypto).catch(() => {});
+    referenceApi.banks().then(setAllBanks).catch(() => {});
+  }, []);
+
+  const banks   = allBanks;
+  const symbols = [...new Set(allCrypto.map((a) => a.symbol))];
+  const getNetworks = (sym: string) => allCrypto.filter((a) => a.symbol === sym);
+  const currentAsset = allCrypto.find((a) => a.symbol === selectedSymbol && a.network === selectedNetwork);
 
   const handleFormSubmit = (values: Record<string, unknown>) => {
     setPendingValues(values);
     setConfirmOpen(true);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!pendingValues) return;
     setLoading(true);
-    setTimeout(() => {
-      if (method === 'crypto') {
-        const asset = cryptoAssets.find((a) => a.symbol === pendingValues.symbol && a.network === pendingValues.network);
-        setResult({
-          transactionId: `WD${Date.now()}`,
-          amount: pendingValues.amount as number,
-          currency: pendingValues.symbol as string,
-          fee: asset?.withdrawFee || 0,
-          estimatedTime: pendingValues.network === 'BTC' ? '30–60 phút' : '5–15 phút',
-        });
+    try {
+      const pv = pendingValues;
+      if (USE_API) {
+        if (method === 'crypto') {
+          const tx = await transactionApi.withdrawCrypto({
+            symbol: pv.symbol as string,
+            network: pv.network as string,
+            address: pv.address as string,
+            amount: pv.amount as number,
+          });
+          const asset = allCrypto.find((a) => a.symbol === pv.symbol && a.network === pv.network);
+          setResult({ transactionId: tx.id, amount: tx.amount, currency: tx.currency, fee: asset?.withdrawFee || 0, estimatedTime: pv.network === 'BTC' ? '30–60 phút' : '5–15 phút' });
+        } else {
+          const tx = await transactionApi.withdrawBank({
+            bankCode: pv.bankCode as string,
+            accountNumber: pv.accountNumber as string,
+            accountName: pv.accountName as string,
+            amount: pv.amount as number,
+          });
+          setResult({ transactionId: tx.id, amount: tx.amount, currency: 'VND', fee: 0, estimatedTime: '5–30 phút' });
+        }
       } else {
-        setResult({
-          transactionId: `WD${Date.now()}`,
-          amount: pendingValues.amount as number,
-          currency: 'VND',
-          fee: 0,
-          estimatedTime: '5–30 phút',
-        });
+        if (method === 'crypto') {
+          const asset = allCrypto.find((a) => a.symbol === pv.symbol && a.network === pv.network);
+          setResult({ transactionId: `WD${Date.now()}`, amount: pv.amount as number, currency: pv.symbol as string, fee: asset?.withdrawFee || 0, estimatedTime: pv.network === 'BTC' ? '30–60 phút' : '5–15 phút' });
+        } else {
+          setResult({ transactionId: `WD${Date.now()}`, amount: pv.amount as number, currency: 'VND', fee: 0, estimatedTime: '5–30 phút' });
+        }
       }
-      setLoading(false);
       setConfirmOpen(false);
       setPendingValues(null);
-    }, 800);
+    } catch (err) {
+      message.error((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetAll = () => {

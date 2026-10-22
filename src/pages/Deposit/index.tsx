@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Form, InputNumber, Select, Button, Typography, Alert,
   message, QRCode, Grid, Tag,
@@ -10,8 +10,11 @@ import {
 } from '@ant-design/icons';
 import { CryptoIcon, BankIcon, CryptoSymbolIcon } from '../../components/Icons';
 import ExchangeRateBadge from '../../components/ExchangeRateBadge';
-import { cryptoAssets, getUniqueSymbols } from '../../mocks/crypto';
+import { cryptoAssets } from '../../mocks/crypto';
 import { getActiveBanks } from '../../mocks/banks';
+import { referenceApi, transactionApi } from '../../services/api';
+import { USE_API } from '../../hooks/useApi';
+import type { CryptoAsset, Bank } from '../../types';
 import { useExchangeRate, MIN_USDT, usdtToVnd } from '../../hooks/useExchangeRate';
 
 const { Title, Text } = Typography;
@@ -40,40 +43,59 @@ const DepositPage = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const exRate = useExchangeRate();
-  const minVnd = usdtToVnd(MIN_USDT, exRate.rate); // 1000 USDT → VND
+  const minVnd = usdtToVnd(MIN_USDT, exRate.rate);
 
-  const banks = getActiveBanks();
-  const symbols = getUniqueSymbols();
+  const [allCrypto, setAllCrypto] = useState<CryptoAsset[]>(cryptoAssets);
+  const [allBanks, setAllBanks]   = useState<Bank[]>(getActiveBanks());
 
-  const getNetworks = (symbol: string) => cryptoAssets.filter((a) => a.symbol === symbol);
+  useEffect(() => {
+    if (!USE_API) return;
+    referenceApi.crypto().then(setAllCrypto).catch(() => {});
+    referenceApi.banks().then(setAllBanks).catch(() => {});
+  }, []);
+
+  const banks   = allBanks;
+  const symbols = [...new Set(allCrypto.map((a) => a.symbol))];
+  const getNetworks = (symbol: string) => allCrypto.filter((a) => a.symbol === symbol);
 
   const copy = (text: string, label = 'Đã sao chép!') => {
     navigator.clipboard.writeText(text);
     message.success({ content: label, icon: <CheckCircleOutlined style={{ color: '#22c55e' }} /> });
   };
 
-  const handleSubmit = (values: Record<string, unknown>) => {
+  const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
-    setTimeout(() => {
+    try {
       if (method === 'crypto') {
         const network = values.network as string;
-        const addr =
-          network === 'TRC20' ? 'TXqLKj8fJKj9dJKj8fJKj9dJKj8fJKj9d' :
-          network === 'ERC20' ? '0x742d35Cc6634C0532925a3b844Bc454e4438f44e' :
-          network === 'BEP20' ? '0x742d35Cc6634C0532925a3b844Bc454e4438f44e' :
-          'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
-        setDepositInfo({ type: 'crypto', cryptoSymbol: values.symbol as string, network, walletAddress: addr });
+        if (USE_API) {
+          const tx = await transactionApi.depositCrypto({ symbol: values.symbol as string, network });
+          setDepositInfo({ type: 'crypto', cryptoSymbol: values.symbol as string, network, walletAddress: tx.walletAddress });
+        } else {
+          const addr =
+            network === 'TRC20' ? 'TXqLKj8fJKj9dJKj8fJKj9dJKj8fJKj9d' :
+            network === 'ERC20' ? '0x742d35Cc6634C0532925a3b844Bc454e4438f44e' :
+            network === 'BEP20' ? '0x742d35Cc6634C0532925a3b844Bc454e4438f44e' :
+            'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
+          setDepositInfo({ type: 'crypto', cryptoSymbol: values.symbol as string, network, walletAddress: addr });
+        }
       } else {
-        const bank = banks.find((b) => b.code === values.bankCode);
-        const code = `NAP${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-        setDepositInfo({
-          type: 'bank', bankName: bank?.shortName,
-          accountNumber: '1234567890', accountName: 'CONG TY CHECK BANK',
-          amount: values.amount as number, transferContent: code,
-        });
+        const bankCode = values.bankCode as string;
+        const amount   = values.amount as number;
+        const bank     = banks.find((b) => b.code === bankCode);
+        if (USE_API) {
+          const tx = await transactionApi.depositBank({ bankCode, amount });
+          setDepositInfo({ type: 'bank', bankName: bank?.shortName, accountNumber: '1234567890', accountName: 'CONG TY CHECK BANK', amount, transferContent: (tx as unknown as Record<string,string>)['transferContent'] });
+        } else {
+          const code = `NAP${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+          setDepositInfo({ type: 'bank', bankName: bank?.shortName, accountNumber: '1234567890', accountName: 'CONG TY CHECK BANK', amount, transferContent: code });
+        }
       }
+    } catch (err) {
+      message.error((err as Error).message);
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   // ---- Render deposit result ----

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Select, DatePicker, Button, Typography, Drawer,
   Descriptions, Tag, Grid, Statistic, Row, Col, Card,
@@ -10,6 +10,8 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { mockTransactions } from '../../mocks/transactions';
+import { transactionApi } from '../../services/api';
+import { USE_API } from '../../hooks/useApi';
 import type { Transaction, TransactionStatus, TransactionType } from '../../types';
 
 const { Title, Text } = Typography;
@@ -34,17 +36,27 @@ const HistoryPage = () => {
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
   const [methodFilter, setMethodFilter] = useState<'crypto' | 'bank' | 'all'>('all');
 
+  // Load từ API khi USE_API=true
+  useEffect(() => {
+    if (!USE_API) return;
+    setLoading(true);
+    transactionApi.list()
+      .then((data) => setTransactions(data))
+      .catch(() => {}) // giữ mock nếu lỗi
+      .finally(() => setLoading(false));
+  }, []);
+
   const screens = useBreakpoint();
   const isMobile = !screens.md;
 
-  const totalDeposit  = mockTransactions.filter((t) => t.type === 'deposit'  && t.status === 'completed').length;
-  const totalWithdraw = mockTransactions.filter((t) => t.type === 'withdraw' && t.status === 'completed').length;
-  const pending       = mockTransactions.filter((t) => t.status === 'pending').length;
+  const totalDeposit  = transactions.filter((t) => t.type === 'deposit'  && t.status === 'completed').length;
+  const totalWithdraw = transactions.filter((t) => t.type === 'withdraw' && t.status === 'completed').length;
+  const pending       = transactions.filter((t) => t.status === 'pending').length;
 
   const applyFilters = (type = typeFilter, status = statusFilter, meth = methodFilter) => {
     setLoading(true);
     setTimeout(() => {
-      let r = [...mockTransactions];
+      let r = [...transactions];
       if (type   !== 'all') r = r.filter((t) => t.type   === type);
       if (status !== 'all') r = r.filter((t) => t.status === status);
       if (meth   !== 'all') r = r.filter((t) => t.method === meth);
@@ -212,7 +224,9 @@ const HistoryPage = () => {
           </Button>
           <Button icon={<ReloadOutlined />} loading={loading} onClick={() => {
             setLoading(true);
-            setTimeout(() => { setTransactions(mockTransactions); setLoading(false); }, 400);
+            (USE_API ? transactionApi.list() : Promise.resolve(mockTransactions))
+              .then((data) => setTransactions(data))
+              .finally(() => setLoading(false));
           }} />
         </div>
       </div>
