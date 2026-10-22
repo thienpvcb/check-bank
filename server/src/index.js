@@ -48,6 +48,11 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString(), env: process.env.NODE_ENV });
 });
 
+// Keep-alive ping endpoint (ngăn Render free tier sleep)
+app.get('/ping', (_req, res) => {
+  res.json({ pong: true, time: new Date().toISOString() });
+});
+
 // 404
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Endpoint không tồn tại' });
