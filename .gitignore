@@ -1,7 +1,9 @@
 # Dependencies
 node_modules
-dist
 dist-ssr
+
+# dist được commit để Cloudflare Pages deploy
+# dist
 
 # Env files — KHÔNG commit secrets
 .env
