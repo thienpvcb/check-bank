@@ -1,0 +1,132 @@
+import type { GamePlatform, PlatformTransaction, LinkedPlatform } from '../types';
+
+// ── Danh sách nhà cái / platform mẫu ──────────────────────────
+export const gamePlatforms: GamePlatform[] = [
+  {
+    id: 'gp-sun',
+    name: 'SunWin',
+    domain: 'sunwin.com',
+    logo: 'https://api.dicebear.com/7.x/initials/svg?seed=SW&backgroundColor=f59e0b&textColor=ffffff',
+    currency: ['VND', 'USDT'],
+    isActive: true,
+    description: 'Cổng game bài & slot phổ biến',
+    minDeposit: 50_000,
+    minWithdraw: 100_000,
+    minDepositUsdt: 1_000,
+    minWithdrawUsdt: 1_000,
+  },
+  {
+    id: 'gp-hit',
+    name: 'Hit Club',
+    domain: 'hit.club',
+    logo: 'https://api.dicebear.com/7.x/initials/svg?seed=HC&backgroundColor=ef4444&textColor=ffffff',
+    currency: ['VND', 'USDT'],
+    isActive: true,
+    description: 'Game bài đổi thưởng uy tín',
+    minDeposit: 50_000,
+    minWithdraw: 100_000,
+    minDepositUsdt: 1_000,
+    minWithdrawUsdt: 1_000,
+  },
+  {
+    id: 'gp-rio',
+    name: 'Rio66',
+    domain: 'rio66.com',
+    logo: 'https://api.dicebear.com/7.x/initials/svg?seed=R6&backgroundColor=7c3aed&textColor=ffffff',
+    currency: ['VND', 'USDT'],
+    isActive: true,
+    description: 'Casino online & thể thao',
+    minDeposit: 100_000,
+    minWithdraw: 200_000,
+    minDepositUsdt: 1_000,
+    minWithdrawUsdt: 1_000,
+  },
+  {
+    id: 'gp-sv',
+    name: 'SV388',
+    domain: 'sv388.com',
+    logo: 'https://api.dicebear.com/7.x/initials/svg?seed=SV&backgroundColor=16a34a&textColor=ffffff',
+    currency: ['VND'],
+    isActive: true,
+    description: 'Đá gà & cá cược thể thao',
+    minDeposit: 100_000,
+    minWithdraw: 200_000,
+    minDepositUsdt: 1_000,
+    minWithdrawUsdt: 1_000,
+  },
+  {
+    id: 'gp-j88',
+    name: 'J88',
+    domain: 'j88.io',
+    logo: 'https://api.dicebear.com/7.x/initials/svg?seed=J8&backgroundColor=0891b2&textColor=ffffff',
+    currency: ['VND', 'USDT'],
+    isActive: false,
+    description: 'Slot game & nổ hũ',
+    minDeposit: 50_000,
+    minWithdraw: 100_000,
+    minDepositUsdt: 1_000,
+    minWithdrawUsdt: 1_000,
+  },
+];
+
+// ── Các nhà cái đã liên kết (mock) ────────────────────────────
+export const mockLinkedPlatforms: LinkedPlatform[] = [
+  {
+    id: 'link-001',
+    platformId: 'gp-sun',
+    platformName: 'SunWin',
+    domain: 'sunwin.com',
+    apiKey: 'sw_live_*************8f4a',
+    linkedAt: '2026-10-01T10:00:00Z',
+    status: 'active',
+  },
+];
+
+// ── Lịch sử giao dịch nhà cái (mock) ─────────────────────────
+export const mockPlatformTransactions: PlatformTransaction[] = [
+  {
+    id: 'PTX001',
+    platformId: 'gp-sun',
+    platformName: 'SunWin',
+    type: 'deposit',
+    currency: 'VND',
+    amount: 500_000,
+    userId: 'sv_user_88991',
+    username: 'player_demo01',
+    otp: '482910',
+    status: 'completed',
+    createdAt: '2026-10-22T09:00:00Z',
+    updatedAt: '2026-10-22T09:02:00Z',
+  },
+  {
+    id: 'PTX002',
+    platformId: 'gp-hit',
+    platformName: 'Hit Club',
+    type: 'withdraw',
+    currency: 'USDT',
+    amount: 20,
+    userId: 'hc_99887766',
+    username: 'player_demo01',
+    otp: '774433',
+    status: 'completed',
+    createdAt: '2026-10-21T14:00:00Z',
+    updatedAt: '2026-10-21T14:05:00Z',
+  },
+  {
+    id: 'PTX003',
+    platformId: 'gp-sun',
+    platformName: 'SunWin',
+    type: 'deposit',
+    currency: 'USDT',
+    amount: 50,
+    userId: 'sv_user_88991',
+    username: 'player_demo01',
+    otp: '113856',
+    status: 'pending',
+    createdAt: '2026-10-22T11:30:00Z',
+    updatedAt: '2026-10-22T11:30:00Z',
+  },
+];
+
+export const getPlatformById = (id: string) => gamePlatforms.find((p) => p.id === id);
+export const getActivePlatforms = () => gamePlatforms.filter((p) => p.isActive);

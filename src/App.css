@@ -1,0 +1,79 @@
+/* Reset default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Ant Design Table disabled row style */
+.ant-table-row-disabled {
+  opacity: 0.6;
+  background-color: #fafafa;
+}
+
+.ant-table-row-disabled:hover > td {
+  background-color: #fafafa !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Smooth transitions */
+.ant-layout-sider,
+.ant-layout {
+  transition: all 0.2s ease;
+}
+
+/* Card hover effect */
+.ant-card {
+  transition: box-shadow 0.3s ease;
+}
+
+.ant-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Button ripple effect enhancement */
+.ant-btn {
+  transition: all 0.3s ease;
+}
+
+/* Form input focus */
+.ant-input:focus,
+.ant-input-number:focus,
+.ant-select-focused .ant-select-selector {
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* Table row hover */
+.ant-table-tbody > tr:hover > td {
+  background-color: #e6f7ff !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .ant-layout-content {
+    margin: 12px 8px !important;
+    padding: 16px !important;
+  }
+
+  .ant-card {
+    margin-bottom: 12px;
+  }
+}

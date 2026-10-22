@@ -1,0 +1,126 @@
+import type { Transaction } from '../types';
+
+export const mockTransactions: Transaction[] = [
+  {
+    id: 'TXN001',
+    type: 'deposit',
+    method: 'crypto',
+    amount: 500,
+    currency: 'USDT',
+    status: 'completed',
+    createdAt: '2026-10-22T10:30:00Z',
+    updatedAt: '2026-10-22T10:35:00Z',
+    cryptoAsset: 'USDT',
+    network: 'TRC20',
+    walletAddress: 'TXqLKj8fJKj9dJKj8fJKj9dJKj8fJKj9d',
+    txHash: '0x1234567890abcdef1234567890abcdef12345678',
+  },
+  {
+    id: 'TXN002',
+    type: 'withdraw',
+    method: 'bank',
+    amount: 5000000,
+    currency: 'VND',
+    status: 'pending',
+    createdAt: '2026-10-22T09:00:00Z',
+    updatedAt: '2026-10-22T09:00:00Z',
+    bankCode: 'VCB',
+    bankName: 'Vietcombank',
+    accountNumber: '1234567890',
+    accountName: 'NGUYEN VAN A',
+  },
+  {
+    id: 'TXN003',
+    type: 'deposit',
+    method: 'bank',
+    amount: 10000000,
+    currency: 'VND',
+    status: 'completed',
+    createdAt: '2026-10-21T15:20:00Z',
+    updatedAt: '2026-10-21T15:25:00Z',
+    bankCode: 'TCB',
+    bankName: 'Techcombank',
+    accountNumber: '9876543210',
+    accountName: 'NGUYEN VAN A',
+  },
+  {
+    id: 'TXN004',
+    type: 'withdraw',
+    method: 'crypto',
+    amount: 0.05,
+    currency: 'ETH',
+    status: 'failed',
+    createdAt: '2026-10-21T12:00:00Z',
+    updatedAt: '2026-10-21T12:10:00Z',
+    cryptoAsset: 'ETH',
+    network: 'ERC20',
+    walletAddress: '0xAbCdEf1234567890AbCdEf1234567890AbCdEf12',
+  },
+  {
+    id: 'TXN005',
+    type: 'deposit',
+    method: 'crypto',
+    amount: 0.001,
+    currency: 'BTC',
+    status: 'completed',
+    createdAt: '2026-10-20T08:45:00Z',
+    updatedAt: '2026-10-20T09:15:00Z',
+    cryptoAsset: 'BTC',
+    network: 'BTC',
+    walletAddress: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+    txHash: '3b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7',
+  },
+  {
+    id: 'TXN006',
+    type: 'withdraw',
+    method: 'bank',
+    amount: 2000000,
+    currency: 'VND',
+    status: 'completed',
+    createdAt: '2026-10-19T14:30:00Z',
+    updatedAt: '2026-10-19T14:45:00Z',
+    bankCode: 'MB',
+    bankName: 'MB Bank',
+    accountNumber: '0123456789',
+    accountName: 'TRAN THI B',
+  },
+  {
+    id: 'TXN007',
+    type: 'deposit',
+    method: 'bank',
+    amount: 50000000,
+    currency: 'VND',
+    status: 'cancelled',
+    createdAt: '2026-10-18T11:00:00Z',
+    updatedAt: '2026-10-18T11:30:00Z',
+    bankCode: 'BIDV',
+    bankName: 'BIDV',
+    accountNumber: '5678901234',
+    accountName: 'LE VAN C',
+  },
+  {
+    id: 'TXN008',
+    type: 'withdraw',
+    method: 'crypto',
+    amount: 1000,
+    currency: 'USDT',
+    status: 'pending',
+    createdAt: '2026-10-22T11:00:00Z',
+    updatedAt: '2026-10-22T11:00:00Z',
+    cryptoAsset: 'USDT',
+    network: 'BEP20',
+    walletAddress: '0x9876543210abcdef9876543210abcdef98765432',
+  },
+];
+
+export const getTransactionsByType = (type: 'deposit' | 'withdraw'): Transaction[] => {
+  return mockTransactions.filter((tx) => tx.type === type);
+};
+
+export const getTransactionsByStatus = (status: string): Transaction[] => {
+  return mockTransactions.filter((tx) => tx.status === status);
+};
+
+export const getTransactionById = (id: string): Transaction | undefined => {
+  return mockTransactions.find((tx) => tx.id === id);
+};
