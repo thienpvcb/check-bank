@@ -224,7 +224,13 @@ const DepositPage = () => {
             />
             <div style={{ background: '#182230', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, marginBottom: 16, textAlign: 'center' }}>
               <div style={{ display: 'inline-block', background: '#fff', padding: 16, borderRadius: 12, marginBottom: 16 }}>
-                <QRCode value={depositInfo.walletAddress || ''} size={isMobile ? 160 : 200} bordered={false} />
+                <QRCode
+                  value={depositInfo.walletAddress || ''}
+                  size={isMobile ? 160 : 200}
+                  bordered={false}
+                  color="#000000"
+                  bgColor="#ffffff"
+                />
               </div>
               <div style={{ background: '#1e2d40', border: '1px solid rgba(79,142,247,0.25)', borderRadius: 10, padding: '12px 16px', fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: '#4f8ef7', wordBreak: 'break-all', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <span>{depositInfo.walletAddress}</span>
