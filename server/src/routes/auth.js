@@ -24,6 +24,11 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ success: false, message: 'Tên đăng nhập hoặc mật khẩu không đúng' });
   }
 
+  // Kiểm tra tài khoản có bị vô hiệu hóa không
+  if (user.isActive === false) {
+    return res.status(403).json({ success: false, message: 'Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ Admin.' });
+  }
+
   const token = jwt.sign(
     { sub: user.id, username: user.username, role: user.role },
     process.env.JWT_SECRET,

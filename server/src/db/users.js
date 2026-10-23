@@ -19,7 +19,7 @@ const fromDb = (row) => row ? ({
   balanceUsdt:  Number(row.balance_usdt),
   avatar:       row.avatar,
   role:         row.role,
-  isActive:     row.is_active  !== undefined ? row.is_active  : true,
+  isActive:     row.is_active  !== undefined && row.is_active !== null ? Boolean(row.is_active) : true,
   disabledAt:   row.disabled_at ?? null,
   disabledBy:   row.disabled_by ?? null,
   createdAt:    row.created_at,
