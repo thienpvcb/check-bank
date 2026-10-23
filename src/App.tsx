@@ -15,6 +15,7 @@ import GamePortalPage from './pages/GamePortal';
 import AdminDashboard from './pages/Admin/Dashboard';
 import TransactionReview from './pages/Admin/TransactionReview';
 import AuditLogPage from './pages/Admin/AuditLogPage';
+import UserManagement from './pages/Admin/UserManagement';
 import './index.css';
 
 function App() {
@@ -86,6 +87,7 @@ function App() {
                       <Route path="/withdraw" element={<TransactionReview txType="withdraw" />} />
                       <Route path="/deposit"  element={<TransactionReview txType="deposit" />} />
                       <Route path="/audit"    element={<AuditLogPage />} />
+                      <Route path="/users"    element={<UserManagement />} />
                     </Routes>
                   </AdminLayout>
                 </AdminRoute>

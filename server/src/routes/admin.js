@@ -3,7 +3,10 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { supabase, isDbReady } from '../db/index.js';
 import { updateStatus, getById } from '../db/transactions.js';
 import { addLog, getLogs } from '../db/auditLog.js';
-import { safeUser } from '../db/users.js';
+import {
+  safeUser, getAllUsers, findById, createUser,
+  toggleUserActive, creditBalance,
+} from '../db/users.js';
 
 const router = Router();
 router.use(authenticate);
@@ -12,9 +15,6 @@ router.use(requireAdmin);
 // ── Helper: get ALL transactions (admin sees everyone's) ──────
 const getAllTransactions = async (filters = {}) => {
   if (!isDbReady()) {
-    // fallback: import in-memory from transactions db
-    const { getByUser } = await import('../db/transactions.js');
-    // In mem mode just return demo transactions
     return [];
   }
 
@@ -83,7 +83,6 @@ router.get('/transactions/:id', async (req, res) => {
     const tx = await getById(req.params.id);
     if (!tx) return res.status(404).json({ success: false, message: 'Không tìm thấy' });
 
-    // Lấy audit log của tx này
     const logs = await getLogs({ txId: req.params.id });
     res.json({ success: true, data: { ...tx, auditLogs: logs } });
   } catch (err) {
@@ -188,6 +187,115 @@ router.get('/stats', async (req, res) => {
         total:     (data ?? []).length,
       },
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// USER MANAGEMENT ROUTES
+// ══════════════════════════════════════════════════════════════
+
+// ── GET /api/admin/users ─────────────────────────────────────
+router.get('/users', async (req, res) => {
+  try {
+    const users = await getAllUsers();
+    res.json({ success: true, data: users });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ── POST /api/admin/users ─────────────────────────────────────
+router.post('/users', async (req, res) => {
+  try {
+    const { username, password, fullName, email, role } = req.body;
+    if (!username?.trim() || !password?.trim() || !fullName?.trim() || !email?.trim()) {
+      return res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc' });
+    }
+    const user = await createUser({ username, password, fullName, email, role });
+    res.status(201).json({ success: true, data: user, message: 'Đã tạo tài khoản thành công' });
+  } catch (err) {
+    const isUnique = err.code === '23505' || err.message?.includes('duplicate');
+    res.status(isUnique ? 409 : 500).json({
+      success: false,
+      message: isUnique ? 'Username hoặc email đã tồn tại' : err.message,
+    });
+  }
+});
+
+// ── GET /api/admin/users/:id ──────────────────────────────────
+router.get('/users/:id', async (req, res) => {
+  try {
+    const user = await findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy user' });
+
+    // Recent transactions for this user
+    let recentTx = [];
+    if (isDbReady()) {
+      const { data } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', req.params.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      recentTx = data ?? [];
+    }
+
+    res.json({ success: true, data: { ...safeUser(user), recentTransactions: recentTx } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ── PATCH /api/admin/users/:id/toggle ────────────────────────
+router.patch('/users/:id/toggle', async (req, res) => {
+  try {
+    const { isActive, reason } = req.body;
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'isActive phải là boolean' });
+    }
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ success: false, message: 'Không thể tự vô hiệu hóa tài khoản của mình' });
+    }
+
+    const updated = await toggleUserActive(req.params.id, req.user.id, isActive);
+    if (!updated) return res.status(404).json({ success: false, message: 'Không tìm thấy user' });
+
+    // Log the action
+    await addLog({
+      adminId:   req.user.id,
+      adminName: req.user.fullName || req.user.username,
+      action:    isActive ? 'approve' : 'reject',
+      txId:      `user-${req.params.id}`,
+      reason:    reason || (isActive ? 'Kích hoạt tài khoản' : 'Vô hiệu hóa tài khoản'),
+    }).catch(() => {}); // audit log failure should not block the response
+
+    res.json({
+      success: true,
+      data: updated,
+      message: isActive ? 'Đã kích hoạt tài khoản' : 'Đã vô hiệu hóa tài khoản',
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ── POST /api/admin/users/:id/credit ─────────────────────────
+router.post('/users/:id/credit', async (req, res) => {
+  try {
+    const { vndAmount = 0, usdtAmount = 0, note } = req.body;
+    if (!note?.trim()) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập ghi chú' });
+    }
+    if (vndAmount === 0 && usdtAmount === 0) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập số tiền cần điều chỉnh' });
+    }
+
+    const updated = await creditBalance(req.params.id, Number(vndAmount), Number(usdtAmount));
+    if (!updated) return res.status(404).json({ success: false, message: 'Không tìm thấy user' });
+
+    res.json({ success: true, data: updated, message: 'Đã cập nhật số dư thành công' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

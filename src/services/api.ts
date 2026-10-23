@@ -27,9 +27,10 @@ async function request<T>(
   return data.data as T;
 }
 
-const get  = <T>(path: string)              => request<T>('GET',    path);
-const post = <T>(path: string, body: unknown) => request<T>('POST',   path, body);
-const del  = <T>(path: string)              => request<T>('DELETE', path);
+const get   = <T>(path: string)               => request<T>('GET',    path);
+const post  = <T>(path: string, body: unknown) => request<T>('POST',   path, body);
+const patch = <T>(path: string, body: unknown) => request<T>('PATCH',  path, body);
+const del   = <T>(path: string)               => request<T>('DELETE', path);
 
 // ── Auth ──────────────────────────────────────────────────────
 export const authApi = {
@@ -106,6 +107,20 @@ export const clearToken = () => sessionStorage.removeItem('cb_token');
 // ── Admin Types ───────────────────────────────────────────────
 import type { Transaction, TransactionStatus } from '../types';
 
+export interface AdminUser {
+  id: string;
+  username: string;
+  fullName: string;
+  email: string;
+  balance: number;
+  balanceUsdt: number;
+  avatar: string;
+  role: 'user' | 'admin';
+  isActive: boolean;
+  disabledAt?: string;
+  createdAt: string;
+}
+
 export interface AdminTransaction {
   id: string;
   userId: string;
@@ -147,6 +162,16 @@ export interface AuditLog {
 export const adminApi = {
   stats: () =>
     get<{ pending: number; completed: number; failed: number; expired: number; total: number }>('/admin/stats'),
+
+  // User management
+  users: () => get<AdminUser[]>('/admin/users'),
+  getUser: (id: string) => get<AdminUser>(`/admin/users/${id}`),
+  createUser: (body: { username: string; password: string; fullName: string; email: string; role?: string }) =>
+    post<AdminUser>('/admin/users', body),
+  toggleUser: (id: string, body: { isActive: boolean; reason?: string }) =>
+    patch<AdminUser>(`/admin/users/${id}/toggle`, body),
+  creditBalance: (id: string, body: { vndAmount?: number; usdtAmount?: number; note: string }) =>
+    post<AdminUser>(`/admin/users/${id}/credit`, body),
 
   transactions: async (params?: { status?: string; type?: string; method?: string; limit?: number }) => {
     const qs = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';

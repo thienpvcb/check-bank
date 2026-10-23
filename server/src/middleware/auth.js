@@ -11,6 +11,11 @@ export const authenticate = async (req, res, next) => {
     const payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
     const user    = await findById(payload.sub);
     if (!user) return res.status(401).json({ success: false, message: 'Người dùng không tồn tại' });
+
+    if (user.isActive === false) {
+      return res.status(403).json({ success: false, message: 'Tài khoản đã bị vô hiệu hóa' });
+    }
+
     req.user = user;
     next();
   } catch {

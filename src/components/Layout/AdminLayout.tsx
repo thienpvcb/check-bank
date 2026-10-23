@@ -5,7 +5,7 @@ import {
   LogoutOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   ArrowDownOutlined, ArrowUpOutlined,
-  AuditOutlined,
+  AuditOutlined, TeamOutlined,
 } from '@ant-design/icons';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogoIcon } from '../Icons';
@@ -19,6 +19,7 @@ const navItems = [
   { key: '/admin/withdraw', icon: <ArrowUpOutlined />,     label: 'Duyệt rút tiền' },
   { key: '/admin/deposit',  icon: <ArrowDownOutlined />,   label: 'Duyệt nạp tiền' },
   { key: '/admin/audit',    icon: <AuditOutlined />,       label: 'Audit Log' },
+  { key: '/admin/users',    icon: <TeamOutlined />,        label: 'Quản lý User' },
 ];
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
