@@ -5,7 +5,7 @@ import { updateStatus, getById } from '../db/transactions.js';
 import { addLog, getLogs } from '../db/auditLog.js';
 import {
   safeUser, getAllUsers, findById, createUser,
-  toggleUserActive, creditBalance,
+  toggleUserActive, creditBalance, updateBalance,
 } from '../db/users.js';
 
 const router = Router();
@@ -102,6 +102,18 @@ router.post('/transactions/:id/approve', async (req, res) => {
     const { note } = req.body;
     const updated = await updateStatus(req.params.id, 'completed');
 
+    // Nếu là DEPOSIT → cộng tiền vào tài khoản user sau khi duyệt
+    if (tx.type === 'deposit') {
+      const isVnd  = tx.method === 'bank';
+      const delta  = Number(tx.amount);
+      await updateBalance(
+        tx.userId,
+        isVnd  ? delta : 0,
+        !isVnd ? delta : 0,
+      );
+    }
+    // Nếu là WITHDRAW → tiền đã bị trừ khi tạo lệnh, không làm gì thêm
+
     await addLog({
       adminId:      req.user.id,
       adminName:    req.user.fullName || req.user.username,
@@ -133,6 +145,18 @@ router.post('/transactions/:id/reject', async (req, res) => {
     }
 
     const updated = await updateStatus(req.params.id, 'failed');
+
+    // Nếu là WITHDRAW → hoàn tiền về tài khoản user
+    if (tx.type === 'withdraw') {
+      const isVnd = tx.method === 'bank';
+      const delta = Number(tx.amount);
+      await updateBalance(
+        tx.userId,
+        isVnd  ? delta : 0,
+        !isVnd ? delta : 0,
+      );
+      console.log(`[ADMIN] Hoàn tiền ${tx.id}: +${delta} ${isVnd ? 'VND' : tx.currency} → user ${tx.userId}`);
+    }
 
     await addLog({
       adminId:      req.user.id,
