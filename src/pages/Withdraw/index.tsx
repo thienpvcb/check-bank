@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import {
   Form, Input, InputNumber, Select, Button, Typography, Alert,
-  Modal, Descriptions, Grid, Tag, message,
+  Modal, Descriptions, Grid, Tag, message, Switch,
 } from 'antd';
 import {
   WalletOutlined, BankOutlined, ExclamationCircleOutlined,
   CheckCircleOutlined, FallOutlined, InfoCircleOutlined,
-  SwapOutlined, HistoryOutlined,
+  SwapOutlined, HistoryOutlined, AppstoreOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { CryptoIcon, BankIcon, CryptoSymbolIcon } from '../../components/Icons';
 import ExchangeRateBadge from '../../components/ExchangeRateBadge';
 import { useNavigate } from 'react-router-dom';
 import { cryptoAssets } from '../../mocks/crypto';
 import { getActiveBanks } from '../../mocks/banks';
+import { gamePlatforms } from '../../mocks/games';
 import { referenceApi, transactionApi } from '../../services/api';
 import { USE_API } from '../../hooks/useApi';
 import type { CryptoAsset, Bank } from '../../types';
@@ -48,6 +49,7 @@ const WithdrawPage = () => {
 
   const [allCrypto, setAllCrypto] = useState<CryptoAsset[]>(cryptoAssets);
   const [allBanks, setAllBanks]   = useState<Bank[]>(getActiveBanks());
+  const [forPlatform, setForPlatform] = useState(false);
 
   useEffect(() => {
     if (!USE_API) return;
@@ -59,6 +61,66 @@ const WithdrawPage = () => {
   const symbols = [...new Set(allCrypto.map((a) => a.symbol))];
   const getNetworks = (sym: string) => allCrypto.filter((a) => a.symbol === sym);
   const currentAsset = allCrypto.find((a) => a.symbol === selectedSymbol && a.network === selectedNetwork);
+  const activePlatforms = gamePlatforms.filter((p) => p.isActive);
+
+  // ── Platform section (dùng chung) ──
+  const renderPlatformSection = () => (
+    <div style={{
+      background: '#1e2d40',
+      border: `1px solid ${forPlatform ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.07)'}`,
+      borderRadius: 10, padding: '14px 16px', marginBottom: 16,
+      transition: 'border-color 0.2s',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: forPlatform ? 16 : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AppstoreOutlined style={{ color: forPlatform ? '#ef4444' : '#4a5f73' }} />
+          <Text style={{ color: '#e8edf5', fontSize: 13, fontWeight: 500 }}>Rút từ nhà cái</Text>
+          <Text style={{ color: '#4a5f73', fontSize: 11 }}>(tuỳ chọn)</Text>
+        </div>
+        <Switch
+          checked={forPlatform}
+          onChange={(v) => {
+            setForPlatform(v);
+            if (!v) { form.setFieldValue('platformId', undefined); form.setFieldValue('gameUserId', undefined); }
+          }}
+          size="small"
+        />
+      </div>
+      {forPlatform && (
+        <>
+          <Form.Item label="Chọn nhà cái" name="platformId"
+            rules={[{ required: true, message: 'Chọn nhà cái' }]}
+            style={{ marginBottom: 12 }}
+          >
+            <Select size="large" placeholder="Chọn nhà cái muốn rút"
+              options={activePlatforms.map((p) => ({
+                value: p.id,
+                label: (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <img src={p.logo} alt={p.name} style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'contain' }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: '#7a8fa6' }}>{p.domain}</div>
+                    </div>
+                  </div>
+                ),
+              }))}
+            />
+          </Form.Item>
+          <Form.Item label="ID tài khoản trong nhà cái" name="gameUserId"
+            rules={[{ required: true, message: 'Nhập ID tài khoản nhà cái' }]}
+            style={{ marginBottom: 0 }}
+          >
+            <Input size="large" placeholder="VD: user123456"
+              prefix={<UserOutlined style={{ color: '#4a5f73' }} />}
+            />
+          </Form.Item>
+        </>
+      )}
+    </div>
+  );
 
   const handleFormSubmit = (values: Record<string, unknown>) => {
     setPendingValues(values);
@@ -198,6 +260,21 @@ const WithdrawPage = () => {
           message="Kiểm tra kỹ trước khi xác nhận. Giao dịch không thể hủy sau khi duyệt."
           type="error" showIcon style={{ marginBottom: 16 }}
         />
+        {/* Platform info nếu có */}
+        {pv.platformId && (
+          <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <AppstoreOutlined style={{ color: '#ef4444' }} />
+              <Text style={{ color: '#ef4444', fontWeight: 600 }}>
+                {activePlatforms.find((p) => p.id === pv.platformId)?.name}
+              </Text>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <Text style={{ color: '#7a8fa6', fontSize: 11, display: 'block' }}>ID nhà cái</Text>
+              <Text style={{ color: '#e8edf5', fontWeight: 600, fontFamily: "'JetBrains Mono', monospace" }}>{pv.gameUserId}</Text>
+            </div>
+          </div>
+        )}
         <Descriptions column={1} bordered size="small">
           {isCrypto ? (
             <>
@@ -416,6 +493,9 @@ const WithdrawPage = () => {
               </div>
             </>
           )}
+
+          {/* ── Nhà cái section ── */}
+          {renderPlatformSection()}
 
           <Button
             type="primary" danger htmlType="submit" block size="large"
