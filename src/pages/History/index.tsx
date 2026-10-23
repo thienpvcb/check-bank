@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Select, DatePicker, Button, Typography,
-  Drawer, Tag, Grid, Statistic, Row, Col, Card,
+  Drawer, Tag, Grid, Statistic, Row, Col, Card, Modal, message,
 } from 'antd';
 import {
   HistoryOutlined, ReloadOutlined,
@@ -10,6 +10,7 @@ import {
   CopyOutlined, CheckOutlined,
   ClockCircleOutlined, CheckCircleOutlined,
   CloseCircleOutlined, StopOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { mockTransactions } from '../../mocks/transactions';
@@ -187,6 +188,39 @@ const HistoryPage = () => {
     setTransactions(allTx);
   };
 
+  const handleCancelWithdraw = (tx: Transaction) => {
+    Modal.confirm({
+      title: 'Hủy lệnh rút tiền?',
+      content: (
+        <div>
+          <p style={{ marginBottom: 8 }}>Lệnh rút <strong>{tx.method === 'bank' ? tx.amount.toLocaleString('vi-VN') + ' ₫' : tx.amount + ' ' + tx.currency}</strong> sẽ bị hủy.</p>
+          <p style={{ color: '#22c55e', fontSize: 13 }}>✓ Tiền sẽ được hoàn lại ngay vào tài khoản của bạn.</p>
+        </div>
+      ),
+      okText: 'Xác nhận hủy', okButtonProps: { danger: true },
+      cancelText: 'Không',
+      onOk: async () => {
+        if (USE_API) {
+          try {
+            await transactionApi.cancelWithdraw(tx.id);
+            message.success('Đã hủy lệnh rút. Tiền đã hoàn về tài khoản!');
+            // Reload list
+            setLoading(true);
+            transactionApi.list().then((data) => { setAllTx(data); setTransactions(data); }).finally(() => setLoading(false));
+          } catch (err) {
+            message.error((err as Error).message);
+          }
+        } else {
+          // Mock: update locally
+          const updated = allTx.map((t) => t.id === tx.id ? { ...t, status: 'cancelled' as TransactionStatus, rejectReason: 'Người dùng tự hủy' } : t);
+          setAllTx(updated); setTransactions(updated);
+          message.success('Đã hủy lệnh rút (demo mode)');
+        }
+        setDrawerVisible(false);
+      },
+    });
+  };
+
   const formatAmount = (tx: Transaction) => {
     const sign = tx.type === 'deposit' ? '+' : '-';
     const val  = tx.method === 'bank'
@@ -263,15 +297,31 @@ const HistoryPage = () => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <Text style={{ color: '#4a5f73', fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>{tx.id}</Text>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            background: cfg.bg, color: cfg.color,
-            border: `1px solid ${cfg.border}`,
-            borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600,
-          }}>
-            {cfg.icon} {cfg.label}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {tx.type === 'withdraw' && tx.status === 'pending' && (
+              <Button size="small" danger
+                onClick={(e) => { e.stopPropagation(); handleCancelWithdraw(tx); }}
+                style={{ fontSize: 10, height: 22, padding: '0 6px' }}
+              >
+                Hủy
+              </Button>
+            )}
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              background: cfg.bg, color: cfg.color,
+              border: `1px solid ${cfg.border}`,
+              borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600,
+            }}>
+              {cfg.icon} {cfg.label}
+            </span>
+          </div>
         </div>
+        {tx.rejectReason && (
+          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <ExclamationCircleOutlined style={{ color: '#ef4444', fontSize: 11 }} />
+            <Text style={{ color: '#ef4444', fontSize: 11 }}>{tx.rejectReason}</Text>
+          </div>
+        )}
       </div>
     );
   };
@@ -375,7 +425,7 @@ const HistoryPage = () => {
           </div>
         )}
 
-        {/* ── Details rows ── */}
+        {/* ── Info rows ── */}
         <div style={{ background: '#182230', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '4px 16px', marginBottom: 16 }}>
           <Row2 label="Mã giao dịch">
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -426,6 +476,36 @@ const HistoryPage = () => {
             </Row2>
           )}
         </div>
+
+        {/* ── Reject reason ── */}
+        {selectedTx.rejectReason && (
+          <div style={{
+            background: 'rgba(239,68,68,0.06)',
+            border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: 12, padding: '14px 16px', marginBottom: 16,
+            display: 'flex', gap: 12,
+          }}>
+            <ExclamationCircleOutlined style={{ color: '#ef4444', fontSize: 18, flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <Text style={{ color: '#ef4444', fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 2 }}>
+                {selectedTx.status === 'cancelled' ? 'Lý do hủy' : 'Lý do từ chối / lỗi'}
+              </Text>
+              <Text style={{ color: '#f87171', fontSize: 13 }}>{selectedTx.rejectReason}</Text>
+            </div>
+          </div>
+        )}
+
+        {/* ── Cancel button (pending withdraw only) ── */}
+        {selectedTx.type === 'withdraw' && selectedTx.status === 'pending' && (
+          <Button
+            danger block size="large"
+            icon={<CloseCircleOutlined />}
+            onClick={() => handleCancelWithdraw(selectedTx)}
+            style={{ height: 48, fontWeight: 700 }}
+          >
+            Hủy lệnh rút tiền
+          </Button>
+        )}
       </div>
     );
   };
@@ -536,7 +616,7 @@ const HistoryPage = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#1a2840' }}>
-                {['Giao dịch', 'Chi tiết', 'Số tiền', 'Trạng thái', 'Thời gian'].map((h) => (
+                {['Giao dịch', 'Chi tiết', 'Số tiền', 'Trạng thái / Lý do', 'Thời gian', ''].map((h) => (
                   <th key={h} style={{
                     padding: '11px 16px', textAlign: 'left',
                     color: '#4a5f73', fontSize: 11, fontWeight: 700,
@@ -615,7 +695,7 @@ const HistoryPage = () => {
                       </Text>
                     </td>
 
-                    {/* Col 4 — status */}
+                    {/* Col 4 — status + reason */}
                     <td style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -625,6 +705,12 @@ const HistoryPage = () => {
                       }}>
                         {cfg.icon} {cfg.label}
                       </span>
+                      {tx.rejectReason && (
+                        <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <ExclamationCircleOutlined style={{ color: '#ef4444', fontSize: 10 }} />
+                          <Text style={{ color: '#ef4444', fontSize: 10 }}>{tx.rejectReason}</Text>
+                        </div>
+                      )}
                     </td>
 
                     {/* Col 5 — time */}
@@ -635,6 +721,19 @@ const HistoryPage = () => {
                       <Text style={{ color: '#4a5f73', fontSize: 11 }}>
                         {dayjs(tx.createdAt).format('HH:mm:ss')}
                       </Text>
+                    </td>
+
+                    {/* Col 6 — cancel button */}
+                    <td style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', width: 80 }}>
+                      {tx.type === 'withdraw' && tx.status === 'pending' && (
+                        <Button
+                          size="small" danger
+                          onClick={(e) => { e.stopPropagation(); handleCancelWithdraw(tx); }}
+                          style={{ fontSize: 11, height: 26, padding: '0 8px' }}
+                        >
+                          Hủy rút
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 );

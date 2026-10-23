@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { getByUser, getById, addTransaction, updateStatus } from '../db/transactions.js';
+import { getByUser, getById, addTransaction, updateStatus, updateStatusWithReason } from '../db/transactions.js';
 import { updateBalance } from '../db/users.js';
 import { getTimeoutMs, getTimeoutMinutes } from '../services/cronJobs.js';
 
@@ -188,6 +188,32 @@ router.post(
     }
   },
 );
+
+// ── POST /api/transactions/:id/cancel — user tự hủy rút ──
+router.post('/:id/cancel', async (req, res) => {
+  try {
+    const tx = await getById(req.params.id);
+    if (!tx || tx.userId !== req.user.id) {
+      return res.status(404).json({ success: false, message: 'Giao dịch không tồn tại' });
+    }
+    if (tx.type !== 'withdraw') {
+      return res.status(400).json({ success: false, message: 'Chỉ có thể hủy lệnh rút tiền' });
+    }
+    if (tx.status !== 'pending') {
+      return res.status(400).json({ success: false, message: `Không thể hủy giao dịch đang ở trạng thái: ${tx.status}` });
+    }
+
+    // Hoàn tiền về tài khoản
+    const isVnd = tx.method === 'bank';
+    const delta = Number(tx.amount);
+    await updateBalance(req.user.id, isVnd ? delta : 0, !isVnd ? delta : 0);
+
+    const updated = await updateStatusWithReason(tx.id, 'cancelled', 'Người dùng tự hủy');
+    res.json({ success: true, data: updated, message: 'Đã hủy giao dịch, tiền đã được hoàn lại' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // ── PATCH /api/transactions/:id/status ──
 router.patch('/:id/status', async (req, res) => {

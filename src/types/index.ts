@@ -33,6 +33,7 @@ export interface Transaction {
   amount: number;
   currency: string;
   status: TransactionStatus;
+  rejectReason?: string;
   createdAt: string;
   updatedAt: string;
   // For crypto

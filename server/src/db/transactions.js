@@ -27,6 +27,7 @@ const fromDb = (r) => ({
   transferContent: r.transfer_content,
   receiverAccount: r.receiver_account,
   receiverName:    r.receiver_name,
+  rejectReason:    r.reject_reason   ?? null,
   createdAt:       r.created_at,
   updatedAt:       r.updated_at,
   expiresAt:       r.expires_at,
@@ -128,6 +129,27 @@ export const updateStatus = async (id, status) => {
   return fromDb(data);
 };
 
+// ── updateStatusWithReason — cập nhật status + lý do ──────────
+export const updateStatusWithReason = async (id, status, rejectReason = null) => {
+  if (!isDbReady()) {
+    const tx = memTx.find((t) => t.id === id);
+    if (!tx) return null;
+    tx.status       = status;
+    tx.rejectReason = rejectReason;
+    tx.updatedAt    = new Date().toISOString();
+    return tx;
+  }
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({ status, reject_reason: rejectReason })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) return null;
+  return fromDb(data);
+};
+
 // ── getPendingExpired — tìm giao dịch pending đã hết hạn ───────
 export const getPendingExpired = async () => {
   const now = new Date().toISOString();
@@ -150,13 +172,13 @@ export const bulkExpire = async (ids) => {
   if (!isDbReady()) {
     ids.forEach((id) => {
       const tx = memTx.find((t) => t.id === id);
-      if (tx) { tx.status = 'expired'; tx.updatedAt = new Date().toISOString(); }
+      if (tx) { tx.status = 'expired'; tx.rejectReason = 'Hết thời gian chờ'; tx.updatedAt = new Date().toISOString(); }
     });
     return;
   }
   await supabase
     .from('transactions')
-    .update({ status: 'expired' })
+    .update({ status: 'expired', reject_reason: 'Hết thời gian chờ xác nhận' })
     .in('id', ids);
 };
 

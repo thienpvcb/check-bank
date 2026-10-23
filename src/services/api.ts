@@ -72,6 +72,9 @@ export const transactionApi = {
 
   withdrawBank: (body: { bankCode: string; accountNumber: string; accountName: string; amount: number }) =>
     post<import('../types').Transaction & { timeoutMinutes: number }>('/transactions/withdraw/bank', body),
+
+  cancelWithdraw: (id: string) =>
+    post<import('../types').Transaction>(`/transactions/${id}/cancel`, {}),
 };
 
 // ── Game portal ───────────────────────────────────────────────

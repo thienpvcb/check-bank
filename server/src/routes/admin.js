@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { supabase, isDbReady } from '../db/index.js';
-import { updateStatus, getById } from '../db/transactions.js';
+import { updateStatus, updateStatusWithReason, getById } from '../db/transactions.js';
 import { addLog, getLogs } from '../db/auditLog.js';
 import {
   safeUser, getAllUsers, findById, createUser,
@@ -144,7 +144,7 @@ router.post('/transactions/:id/reject', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng nhập lý do từ chối' });
     }
 
-    const updated = await updateStatus(req.params.id, 'failed');
+    const updated = await updateStatusWithReason(req.params.id, 'failed', reason);
 
     // Nếu là WITHDRAW → hoàn tiền về tài khoản user
     if (tx.type === 'withdraw') {
