@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { CryptoIcon, BankIcon, CryptoSymbolIcon } from '../../components/Icons';
 import ExchangeRateBadge from '../../components/ExchangeRateBadge';
+import TransactionCountdown from '../../components/TransactionCountdown';
 import { cryptoAssets } from '../../mocks/crypto';
 import { getActiveBanks } from '../../mocks/banks';
 import { gamePlatforms } from '../../mocks/games';
@@ -25,6 +26,9 @@ type Method = 'crypto' | 'bank';
 
 interface DepositInfo {
   type: Method;
+  txId?: string;
+  expiresAt?: string;
+  timeoutMinutes?: number;
   cryptoSymbol?: string;
   network?: string;
   walletAddress?: string;
@@ -81,13 +85,15 @@ const DepositPage = () => {
         const network = values.network as string;
         if (USE_API) {
           const tx = await transactionApi.depositCrypto({ symbol: values.symbol as string, network });
-          setDepositInfo({ type: 'crypto', cryptoSymbol: values.symbol as string, network, walletAddress: tx.walletAddress, platformName, gameUserId });
+          setDepositInfo({ type: 'crypto', txId: tx.id, expiresAt: tx.expiresAt, timeoutMinutes: tx.timeoutMinutes, cryptoSymbol: values.symbol as string, network, walletAddress: tx.walletAddress, platformName, gameUserId });
         } else {
           const addr =
             network === 'TRC20' ? 'TXqLKj8fJKj9dJKj8fJKj9dJKj8fJKj9d' :
             network === 'ERC20' ? '0x742d35Cc6634C0532925a3b844Bc454e4438f44e' :
             'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
-          setDepositInfo({ type: 'crypto', cryptoSymbol: values.symbol as string, network, walletAddress: addr, platformName, gameUserId });
+          // Mock: expire sau 30 phút
+          const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+          setDepositInfo({ type: 'crypto', expiresAt, timeoutMinutes: 30, cryptoSymbol: values.symbol as string, network, walletAddress: addr, platformName, gameUserId });
         }
       } else {
         const bankCode = values.bankCode as string;
@@ -95,10 +101,11 @@ const DepositPage = () => {
         const bank     = banks.find((b) => b.code === bankCode);
         if (USE_API) {
           const tx = await transactionApi.depositBank({ bankCode, amount });
-          setDepositInfo({ type: 'bank', bankName: bank?.shortName, accountNumber: '1234567890', accountName: 'CONG TY CHECK BANK', amount, transferContent: (tx as unknown as Record<string,string>)['transferContent'], platformName, gameUserId });
+          setDepositInfo({ type: 'bank', txId: tx.id, expiresAt: tx.expiresAt, timeoutMinutes: tx.timeoutMinutes, bankName: bank?.shortName, accountNumber: '1234567890', accountName: 'CONG TY CHECK BANK', amount, transferContent: (tx as unknown as Record<string,string>)['transferContent'], platformName, gameUserId });
         } else {
           const code = `NAP${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-          setDepositInfo({ type: 'bank', bankName: bank?.shortName, accountNumber: '1234567890', accountName: 'CONG TY CHECK BANK', amount, transferContent: code, platformName, gameUserId });
+          const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+          setDepositInfo({ type: 'bank', expiresAt, timeoutMinutes: 60, bankName: bank?.shortName, accountNumber: '1234567890', accountName: 'CONG TY CHECK BANK', amount, transferContent: code, platformName, gameUserId });
         }
       }
     } catch (err) {
@@ -194,6 +201,31 @@ const DepositPage = () => {
             Thông tin {depositInfo.type === 'crypto' ? 'địa chỉ ví' : 'tài khoản nhận'}
           </Text>
         </div>
+
+        {/* Countdown timer */}
+        {depositInfo.expiresAt && depositInfo.timeoutMinutes && (
+          <div style={{
+            background: '#182230', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: '14px 18px', marginBottom: 16,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <div>
+              <Text style={{ color: '#7a8fa6', fontSize: 12, display: 'block' }}>Thời gian còn lại</Text>
+              <Text style={{ color: '#4a5f73', fontSize: 11 }}>
+                Hết hạn sau {depositInfo.timeoutMinutes} phút → tự động huỷ
+              </Text>
+            </div>
+            <TransactionCountdown
+              txId={depositInfo.txId || ''}
+              expiresAt={depositInfo.expiresAt}
+              timeoutMinutes={depositInfo.timeoutMinutes}
+              onStatusChange={(s) => {
+                if (s === 'completed') message.success('Giao dịch đã được xác nhận!');
+                if (s === 'expired') message.warning('Giao dịch đã hết hạn.');
+              }}
+            />
+          </div>
+        )}
 
         {/* Platform info nếu có */}
         {depositInfo.platformName && (

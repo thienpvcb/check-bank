@@ -57,17 +57,20 @@ export const transactionApi = {
     return get<import('../types').Transaction[]>(`/transactions${qs}`);
   },
 
+  poll: (id: string) =>
+    get<{ id: string; status: string; expiresAt: string; remainingMs: number; remainingSec: number; isExpired: boolean }>(`/transactions/${id}/poll`),
+
   depositCrypto: (body: { symbol: string; network: string }) =>
-    post<import('../types').Transaction>('/transactions/deposit/crypto', body),
+    post<import('../types').Transaction & { expiresAt: string; timeoutMinutes: number }>('/transactions/deposit/crypto', body),
 
   depositBank: (body: { bankCode: string; amount: number }) =>
-    post<import('../types').Transaction & { transferContent: string }>('/transactions/deposit/bank', body),
+    post<import('../types').Transaction & { transferContent: string; expiresAt: string; timeoutMinutes: number }>('/transactions/deposit/bank', body),
 
   withdrawCrypto: (body: { symbol: string; network: string; address: string; amount: number }) =>
-    post<import('../types').Transaction>('/transactions/withdraw/crypto', body),
+    post<import('../types').Transaction & { timeoutMinutes: number }>('/transactions/withdraw/crypto', body),
 
   withdrawBank: (body: { bankCode: string; accountNumber: string; accountName: string; amount: number }) =>
-    post<import('../types').Transaction>('/transactions/withdraw/bank', body),
+    post<import('../types').Transaction & { timeoutMinutes: number }>('/transactions/withdraw/bank', body),
 };
 
 // ── Game portal ───────────────────────────────────────────────

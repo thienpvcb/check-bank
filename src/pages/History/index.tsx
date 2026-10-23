@@ -23,6 +23,7 @@ const STATUS_CONFIG: Record<TransactionStatus, { color: string; bg: string; labe
   completed: { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',   label: 'Hoàn thành',  badge: 'success' },
   failed:    { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   label: 'Thất bại',    badge: 'error' },
   cancelled: { color: '#7a8fa6', bg: 'rgba(122,143,166,0.1)', label: 'Đã hủy',     badge: 'default' },
+  expired:   { color: '#7a8fa6', bg: 'rgba(122,143,166,0.1)', label: 'Hết hạn',    badge: 'default' },
 };
 
 const HistoryPage = () => {

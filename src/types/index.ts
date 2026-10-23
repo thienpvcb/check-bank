@@ -1,6 +1,6 @@
 // Transaction Types
 export type TransactionType = 'deposit' | 'withdraw';
-export type TransactionStatus = 'pending' | 'completed' | 'failed' | 'cancelled';
+export type TransactionStatus = 'pending' | 'completed' | 'failed' | 'cancelled' | 'expired';
 export type PaymentMethod = 'crypto' | 'bank';
 
 // Crypto Types

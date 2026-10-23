@@ -6,6 +6,7 @@ import authRoutes        from './routes/auth.js';
 import referenceRoutes   from './routes/reference.js';
 import transactionRoutes from './routes/transactions.js';
 import gamePortalRoutes  from './routes/gamePortal.js';
+import { startCronJobs } from './services/cronJobs.js';
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -71,6 +72,7 @@ app.listen(PORT, () => {
   console.log(`  🌐  http://localhost:${PORT}`);
   console.log(`  🩺  http://localhost:${PORT}/health`);
   console.log('');
+  startCronJobs();
   console.log('  Endpoints:');
   console.log('  POST /api/auth/login');
   console.log('  GET  /api/auth/me');

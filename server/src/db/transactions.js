@@ -29,6 +29,7 @@ const fromDb = (r) => ({
   receiverName:    r.receiver_name,
   createdAt:       r.created_at,
   updatedAt:       r.updated_at,
+  expiresAt:       r.expires_at,
 });
 
 const toDb = (tx) => ({
@@ -50,6 +51,7 @@ const toDb = (tx) => ({
   transfer_content: tx.transferContent  ?? null,
   receiver_account: tx.receiverAccount  ?? null,
   receiver_name:    tx.receiverName     ?? null,
+  expires_at:       tx.expiresAt        ?? null,
 });
 
 // ── getByUser ──────────────────────────────────────────────────
@@ -118,4 +120,49 @@ export const updateStatus = async (id, status) => {
     .single();
   if (error) return null;
   return fromDb(data);
+};
+
+// ── getPendingExpired — tìm giao dịch pending đã hết hạn ───────
+export const getPendingExpired = async () => {
+  const now = new Date().toISOString();
+  if (!isDbReady()) {
+    return memTx.filter(
+      (t) => t.status === 'pending' && t.expiresAt && t.expiresAt < now
+    );
+  }
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('status', 'pending')
+    .lt('expires_at', now);
+  if (error) return [];
+  return (data ?? []).map(fromDb);
+};
+
+// ── bulkUpdateStatus — cập nhật nhiều giao dịch cùng lúc ───────
+export const bulkExpire = async (ids) => {
+  if (!isDbReady()) {
+    ids.forEach((id) => {
+      const tx = memTx.find((t) => t.id === id);
+      if (tx) { tx.status = 'expired'; tx.updatedAt = new Date().toISOString(); }
+    });
+    return;
+  }
+  await supabase
+    .from('transactions')
+    .update({ status: 'expired' })
+    .in('id', ids);
+};
+
+// ── simulateConfirm — giả lập xác nhận giao dịch deposit ───────
+export const getPendingDeposits = async () => {
+  if (!isDbReady()) {
+    return memTx.filter((t) => t.status === 'pending' && t.type === 'deposit');
+  }
+  const { data } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('status', 'pending')
+    .eq('type', 'deposit');
+  return (data ?? []).map(fromDb);
 };
