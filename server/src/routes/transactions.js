@@ -8,12 +8,26 @@ import { updateBalance } from '../db/users.js';
 const router = Router();
 router.use(authenticate);
 
-// Wallet addresses per network (mock — in real system generated per user)
-const DEPOSIT_WALLETS = {
-  TRC20: 'TXqLKj8fJKj9dJKj8fJKj9dJKj8fJKj9d',
-  ERC20: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-  BEP20: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-  BTC:   'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+// ── Sinh địa chỉ ví ngẫu nhiên theo network ──────────────────
+const HEX = '0123456789abcdef';
+const randomHex = (len) => Array.from({ length: len }, () => HEX[Math.floor(Math.random() * 16)]).join('');
+const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+const randomBase58 = (len) => Array.from({ length: len }, () => BASE58[Math.floor(Math.random() * 58)]).join('');
+
+const generateWallet = (network, userId) => {
+  // Seed deterministik per user+network agar konsisten per sesi
+  const seed = (userId + network).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const rng = (max) => { const x = Math.sin(seed * 9301 + 49297) * 233280; return Math.floor((x - Math.floor(x)) * max); };
+  const seededHex  = (len) => Array.from({ length: len }, (_, i) => HEX[(rng(16) + i) % 16]).join('');
+  const seededB58  = (len) => Array.from({ length: len }, (_, i) => BASE58[(rng(58) + i * 7) % 58]).join('');
+
+  switch (network) {
+    case 'TRC20': return `T${seededB58(33)}`;
+    case 'ERC20':
+    case 'BEP20': return `0x${seededHex(40)}`;
+    case 'BTC':   return `bc1q${seededB58(38)}`;
+    default:      return `0x${seededHex(40)}`;
+  }
 };
 
 // ── GET /api/transactions  (own transactions) ──
@@ -45,7 +59,7 @@ router.post(
   }),
   (req, res) => {
     const { symbol, network } = req.body;
-    const walletAddress = DEPOSIT_WALLETS[network];
+    const walletAddress = generateWallet(network, req.user.id);
 
     addTransaction({
       id: `TXN${uuid().slice(0, 8).toUpperCase()}`,
