@@ -100,6 +100,32 @@ export const gamePortalApi = {
   txHistory: () => get<import('../types').PlatformTransaction[]>('/game-portal/transactions'),
 };
 
+// ── Profile & saved bank accounts ────────────────────────────
+export const profileApi = {
+  get: () =>
+    get<import('../store/authStore').User & { bankAccounts: import('../types').UserBankAccount[] }>('/profile'),
+
+  update: (body: { phone?: string; fullNameEn?: string; dob?: string }) =>
+    patch<{ phone?: string; fullNameEn?: string; dob?: string }>('/profile', body),
+
+  getBanks: () =>
+    get<import('../types').UserBankAccount[]>('/profile/banks'),
+
+  addBank: (body: {
+    bankCode: string;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    isDefault?: boolean;
+  }) => post<import('../types').UserBankAccount>('/profile/banks', body),
+
+  deleteBank: (id: string) =>
+    del(`/profile/banks/${id}`),
+
+  setDefault: (id: string) =>
+    post(`/profile/banks/${id}/default`, {}),
+};
+
 // ── Token helpers ─────────────────────────────────────────────
 export const setToken = (token: string) => sessionStorage.setItem('cb_token', token);
 export const clearToken = () => sessionStorage.removeItem('cb_token');

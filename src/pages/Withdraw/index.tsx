@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
   Form, Input, InputNumber, Select, Button, Typography, Alert,
-  Modal, Descriptions, Grid, Tag, message, Switch,
+  Modal, Descriptions, Grid, Tag, message, Switch, Tooltip,
 } from 'antd';
 import {
   WalletOutlined, BankOutlined, ExclamationCircleOutlined,
   CheckCircleOutlined, FallOutlined, InfoCircleOutlined,
   SwapOutlined, HistoryOutlined, AppstoreOutlined, UserOutlined,
+  BookOutlined, FormOutlined,
 } from '@ant-design/icons';
 import { CryptoIcon, BankIcon, CryptoSymbolIcon } from '../../components/Icons';
 import ExchangeRateBadge from '../../components/ExchangeRateBadge';
@@ -14,15 +15,30 @@ import { useNavigate } from 'react-router-dom';
 import { cryptoAssets } from '../../mocks/crypto';
 import { getActiveBanks } from '../../mocks/banks';
 import { gamePlatforms } from '../../mocks/games';
-import { referenceApi, transactionApi } from '../../services/api';
+import { referenceApi, transactionApi, profileApi } from '../../services/api';
 import { USE_API } from '../../hooks/useApi';
-import type { CryptoAsset, Bank } from '../../types';
+import type { CryptoAsset, Bank, UserBankAccount } from '../../types';
 import { useExchangeRate, MIN_USDT, usdtToVnd } from '../../hooks/useExchangeRate';
+
+// Mock saved banks for USE_API=false
+const MOCK_SAVED_BANKS: UserBankAccount[] = [
+  {
+    id: 'ba1',
+    userId: 'u1',
+    bankCode: 'VCB',
+    bankName: 'Vietcombank',
+    accountNumber: '1234567890',
+    accountName: 'NGUYEN VAN DEMO',
+    isDefault: true,
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+];
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
 type Method = 'crypto' | 'bank';
+type BankInputMode = 'saved' | 'manual';
 
 interface WithdrawResult {
   transactionId: string;
@@ -51,10 +67,23 @@ const WithdrawPage = () => {
   const [allBanks, setAllBanks]   = useState<Bank[]>(getActiveBanks());
   const [forPlatform, setForPlatform] = useState(false);
 
+  // ── Saved bank accounts ──────────────────────────────────────
+  const [bankInputMode, setBankInputMode] = useState<BankInputMode>('saved');
+  const [savedBanks, setSavedBanks]       = useState<UserBankAccount[]>([]);
+
   useEffect(() => {
     if (!USE_API) return;
     referenceApi.crypto().then(setAllCrypto).catch(() => {});
     referenceApi.banks().then(setAllBanks).catch(() => {});
+  }, []);
+
+  // Load saved banks on mount (always, so option is available)
+  useEffect(() => {
+    if (USE_API) {
+      profileApi.getBanks().then(setSavedBanks).catch(() => {});
+    } else {
+      setSavedBanks(MOCK_SAVED_BANKS);
+    }
   }, []);
 
   const banks   = allBanks;
@@ -173,6 +202,7 @@ const WithdrawPage = () => {
     setResult(null);
     setSelectedSymbol('USDT');
     setSelectedNetwork('');
+    setBankInputMode('saved');
   };
 
   // ---- Success screen ----
@@ -333,7 +363,7 @@ const WithdrawPage = () => {
           <div
             key={key}
             className={`method-card${method === key ? ' active' : ''}`}
-            onClick={() => { setMethod(key); form.resetFields(); setSelectedSymbol('USDT'); setSelectedNetwork(''); }}
+            onClick={() => { setMethod(key); form.resetFields(); setSelectedSymbol('USDT'); setSelectedNetwork(''); setBankInputMode('saved'); }}
           >
             <div className="method-card-icon" style={{
               background: key === 'crypto' ? 'rgba(245,158,11,0.12)' : 'rgba(79,142,247,0.12)',
@@ -423,6 +453,106 @@ const WithdrawPage = () => {
             </>
           ) : (
             <>
+              {/* ── Saved / Manual selector ── */}
+              {savedBanks.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+                    {([
+                      { key: 'saved' as BankInputMode, label: 'Ngân hàng đã lưu', icon: <BookOutlined /> },
+                      { key: 'manual' as BankInputMode, label: 'Nhập thủ công',    icon: <FormOutlined /> },
+                    ] as { key: BankInputMode; label: string; icon: React.ReactNode }[]).map(({ key, label, icon }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setBankInputMode(key);
+                          form.setFieldsValue({ bankCode: undefined, accountNumber: undefined, accountName: undefined });
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          padding: '10px 12px',
+                          borderRadius: 10,
+                          border: `1px solid ${bankInputMode === key ? 'rgba(79,142,247,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                          background: bankInputMode === key ? 'rgba(79,142,247,0.1)' : 'transparent',
+                          color: bankInputMode === key ? '#4f8ef7' : '#7a8fa6',
+                          cursor: 'pointer',
+                          fontSize: 13,
+                          fontWeight: bankInputMode === key ? 600 : 400,
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        {icon}
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Saved bank dropdown */}
+                  {bankInputMode === 'saved' && (
+                    <div style={{
+                      background: '#1e2d40',
+                      border: '1px solid rgba(79,142,247,0.2)',
+                      borderRadius: 10,
+                      padding: '12px 14px',
+                      marginBottom: 4,
+                    }}>
+                      <div style={{ color: '#7a8fa6', fontSize: 12, marginBottom: 8 }}>Chọn tài khoản đã lưu:</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {savedBanks.map((acc) => {
+                          const isSelected =
+                            form.getFieldValue('bankCode') === acc.bankCode &&
+                            form.getFieldValue('accountNumber') === acc.accountNumber;
+                          return (
+                            <Tooltip key={acc.id} title="Click để điền tự động" placement="right">
+                              <div
+                                onClick={() => {
+                                  form.setFieldsValue({
+                                    bankCode:      acc.bankCode,
+                                    accountNumber: acc.accountNumber,
+                                    accountName:   acc.accountName,
+                                  });
+                                }}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: 12,
+                                  padding: '10px 12px',
+                                  borderRadius: 8,
+                                  border: `1px solid ${isSelected ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                                  background: isSelected ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.02)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s',
+                                }}
+                              >
+                                <img
+                                  src={`https://api.vietqr.io/img/${acc.bankCode}.png`}
+                                  alt={acc.bankName}
+                                  style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain', background: '#fff', padding: 2, flexShrink: 0 }}
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ color: '#e8edf5', fontWeight: 600, fontSize: 13 }}>{acc.bankName}</div>
+                                  <div style={{ color: '#4f8ef7', fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}>
+                                    •••• {acc.accountNumber.slice(-4)}
+                                  </div>
+                                  <div style={{ color: '#7a8fa6', fontSize: 11 }}>{acc.accountName}</div>
+                                </div>
+                                {acc.isDefault && (
+                                  <Tag color="success" style={{ fontSize: 10, lineHeight: '16px', padding: '0 5px', flexShrink: 0 }}>
+                                    Mặc định
+                                  </Tag>
+                                )}
+                                {isSelected && (
+                                  <CheckCircleOutlined style={{ color: '#22c55e', fontSize: 16, flexShrink: 0 }} />
+                                )}
+                              </div>
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <Form.Item label="Chọn ngân hàng" name="bankCode" rules={[{ required: true, message: 'Chọn ngân hàng' }]}>
                 <Select size="large" placeholder="Ngân hàng của bạn"
                   options={banks.map((b) => ({

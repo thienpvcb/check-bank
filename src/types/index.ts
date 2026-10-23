@@ -88,6 +88,28 @@ export interface WithdrawFormData {
 }
 
 // ─────────────────────────────────────────
+// USER PROFILE / SAVED BANK ACCOUNTS
+// ─────────────────────────────────────────
+
+export interface UserBankAccount {
+  id: string;
+  userId: string;
+  bankCode: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export interface UserProfile {
+  phone?: string;
+  fullNameEn?: string;
+  dob?: string;
+  bankAccounts?: UserBankAccount[];
+}
+
+// ─────────────────────────────────────────
 // GAME PORTAL / NHÀ CÁI TYPES
 // ─────────────────────────────────────────
 

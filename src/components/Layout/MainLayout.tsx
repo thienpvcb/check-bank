@@ -31,6 +31,7 @@ const navItems = [
   { key: '/history',        icon: <HistoryOutlined />,   label: 'Lịch sử',         short: 'Lịch sử' },
   { key: '/game-portal',    icon: <AppstoreOutlined />,  label: 'Game Portal',     short: 'Game' },
   { key: '/gateway-status', icon: <ApiOutlined />,       label: 'Trạng thái cổng', short: 'Cổng' },
+  { key: '/profile',        icon: <UserOutlined />,      label: 'Hồ sơ',           short: 'Hồ sơ' },
 ];
 
 const menuItems = navItems.map(({ key, icon, label }) => ({
