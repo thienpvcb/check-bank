@@ -70,7 +70,8 @@ router.post(
       amount: 0, currency: symbol, status: 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      cryptoAsset: symbol, network, walletAddress, expiresAt,
+      cryptoAsset: symbol, network, walletAddress,
+      ...(expiresAt ? { expiresAt } : {}),
     }).then((tx) => res.status(201).json({
       success: true,
       data: { ...tx, expiresAt, timeoutMinutes: getTimeoutMinutes('crypto', network) },
@@ -99,7 +100,7 @@ router.post(
       updatedAt: new Date().toISOString(),
       bankCode, transferContent,
       receiverAccount: '1234567890', receiverName: 'CONG TY CHECK BANK',
-      expiresAt,
+      ...(expiresAt ? { expiresAt } : {}),
     }).then((tx) => res.status(201).json({
       success: true,
       data: { ...tx, transferContent, expiresAt, timeoutMinutes: getTimeoutMinutes('bank', null) },
@@ -119,6 +120,17 @@ router.post(
   async (req, res) => {
     const { symbol, network, address, amount } = req.body;
     try {
+      // Kiểm tra số dư USDT
+      const user = req.user;
+      if (symbol === 'USDT' || symbol === 'BNB' || symbol === 'TRX' || symbol === 'ETH') {
+        if (user.balanceUsdt < amount) {
+          return res.status(400).json({
+            success: false,
+            message: `Số dư không đủ. Số dư hiện tại: ${user.balanceUsdt} USDT, yêu cầu: ${amount} USDT`,
+          });
+        }
+      }
+
       const expiresAt = new Date(Date.now() + getTimeoutMs('crypto', network)).toISOString();
       const tx = await addTransaction({
         id: `TXN${uuid().slice(0, 8).toUpperCase()}`,
@@ -127,7 +139,8 @@ router.post(
         amount, currency: symbol, status: 'pending',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        cryptoAsset: symbol, network, walletAddress: address, expiresAt,
+        cryptoAsset: symbol, network, walletAddress: address,
+        ...(expiresAt ? { expiresAt } : {}),
       });
       await updateBalance(req.user.id, 0, -amount);
       res.status(201).json({ success: true, data: { ...tx, timeoutMinutes: getTimeoutMinutes('crypto', network) } });
@@ -149,6 +162,14 @@ router.post(
   async (req, res) => {
     const { bankCode, accountNumber, accountName, amount } = req.body;
     try {
+      // Kiểm tra số dư VND
+      if (req.user.balance < amount) {
+        return res.status(400).json({
+          success: false,
+          message: `Số dư không đủ. Số dư hiện tại: ${req.user.balance.toLocaleString('vi-VN')} ₫, yêu cầu: ${Number(amount).toLocaleString('vi-VN')} ₫`,
+        });
+      }
+
       const expiresAt = new Date(Date.now() + getTimeoutMs('bank', null)).toISOString();
       const tx = await addTransaction({
         id: `TXN${uuid().slice(0, 8).toUpperCase()}`,
@@ -157,7 +178,8 @@ router.post(
         amount, currency: 'VND', status: 'pending',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        bankCode, accountNumber, accountName, expiresAt,
+        bankCode, accountNumber, accountName,
+        ...(expiresAt ? { expiresAt } : {}),
       });
       await updateBalance(req.user.id, -amount, 0);
       res.status(201).json({ success: true, data: { ...tx, timeoutMinutes: getTimeoutMinutes('bank', null) } });

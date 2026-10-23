@@ -32,27 +32,33 @@ const fromDb = (r) => ({
   expiresAt:       r.expires_at,
 });
 
-const toDb = (tx) => ({
-  id:               tx.id,
-  user_id:          tx.userId,
-  type:             tx.type,
-  method:           tx.method,
-  amount:           tx.amount,
-  currency:         tx.currency,
-  status:           tx.status ?? 'pending',
-  crypto_asset:     tx.cryptoAsset     ?? null,
-  network:          tx.network          ?? null,
-  wallet_address:   tx.walletAddress    ?? null,
-  tx_hash:          tx.txHash           ?? null,
-  bank_code:        tx.bankCode         ?? null,
-  bank_name:        tx.bankName         ?? null,
-  account_number:   tx.accountNumber    ?? null,
-  account_name:     tx.accountName      ?? null,
-  transfer_content: tx.transferContent  ?? null,
-  receiver_account: tx.receiverAccount  ?? null,
-  receiver_name:    tx.receiverName     ?? null,
-  expires_at:       tx.expiresAt        ?? null,
-});
+const toDb = (tx) => {
+  const row = {
+    id:               tx.id,
+    user_id:          tx.userId,
+    type:             tx.type,
+    method:           tx.method,
+    amount:           tx.amount,
+    currency:         tx.currency,
+    status:           tx.status ?? 'pending',
+    crypto_asset:     tx.cryptoAsset     ?? null,
+    network:          tx.network          ?? null,
+    wallet_address:   tx.walletAddress    ?? null,
+    tx_hash:          tx.txHash           ?? null,
+    bank_code:        tx.bankCode         ?? null,
+    bank_name:        tx.bankName         ?? null,
+    account_number:   tx.accountNumber    ?? null,
+    account_name:     tx.accountName      ?? null,
+    transfer_content: tx.transferContent  ?? null,
+    receiver_account: tx.receiverAccount  ?? null,
+    receiver_name:    tx.receiverName     ?? null,
+  };
+  // chỉ thêm expires_at nếu có giá trị (tránh lỗi khi migration chưa chạy)
+  if (tx.expiresAt !== undefined && tx.expiresAt !== null) {
+    row.expires_at = tx.expiresAt;
+  }
+  return row;
+};
 
 // ── getByUser ──────────────────────────────────────────────────
 export const getByUser = async (userId, filters = {}) => {
