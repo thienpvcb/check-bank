@@ -73,6 +73,7 @@ app.listen(PORT, () => {
   console.log('  ✅  CheckBank API đang chạy');
   console.log(`  🌐  http://localhost:${PORT}`);
   console.log(`  🩺  http://localhost:${PORT}/health`);
+  console.log('  🔑  Admin: GET/POST /api/admin/users');
   console.log('');
   startCronJobs();
   console.log('  Endpoints:');
