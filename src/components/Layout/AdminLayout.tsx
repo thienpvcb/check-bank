@@ -85,9 +85,16 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '2px 10px' }}>
-              <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em' }}>ADMIN</Text>
-            </div>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center',
+              background: 'rgba(239,68,68,0.12)',
+              border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: 6, padding: '2px 8px',
+              color: '#ef4444', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+              lineHeight: 1,
+            }}>
+              ADMIN
+            </span>
             <Text style={{ color: '#e8edf5', fontWeight: 600, fontSize: 15 }}>
               {navItems.find((n) => n.key === location.pathname)?.label || 'Admin CMS'}
             </Text>
