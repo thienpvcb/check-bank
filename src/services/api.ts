@@ -102,3 +102,76 @@ export const gamePortalApi = {
 // ── Token helpers ─────────────────────────────────────────────
 export const setToken = (token: string) => sessionStorage.setItem('cb_token', token);
 export const clearToken = () => sessionStorage.removeItem('cb_token');
+
+// ── Admin Types ───────────────────────────────────────────────
+import type { Transaction, TransactionStatus } from '../types';
+
+export interface AdminTransaction {
+  id: string;
+  userId: string;
+  username?: string;
+  userFullName?: string;
+  userEmail?: string;
+  type: 'deposit' | 'withdraw';
+  method: 'crypto' | 'bank';
+  amount: number;
+  currency: string;
+  status: TransactionStatus;
+  cryptoAsset?: string;
+  network?: string;
+  walletAddress?: string;
+  txHash?: string;
+  bankCode?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
+  transferContent?: string;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  auditLogs?: AuditLog[];
+}
+
+export interface AuditLog {
+  id: string;
+  adminId: string;
+  adminName: string;
+  action: 'approve' | 'reject' | 'note';
+  txId: string;
+  reason?: string;
+  beforeStatus?: string;
+  afterStatus?: string;
+  createdAt: string;
+}
+
+export const adminApi = {
+  stats: () =>
+    get<{ pending: number; completed: number; failed: number; expired: number; total: number }>('/admin/stats'),
+
+  transactions: async (params?: { status?: string; type?: string; method?: string; limit?: number }) => {
+    const qs = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';
+    // Backend returns { success, data, stats } — bypass request() to get stats too
+    const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
+    const token = sessionStorage.getItem('cb_token');
+    const res = await fetch(`${BASE}/admin/transactions${qs}`, {
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.message || `HTTP ${res.status}`);
+    return json as { data: AdminTransaction[]; stats: Record<string, number> };
+  },
+
+  getTransaction: (id: string) =>
+    get<AdminTransaction>(`/admin/transactions/${id}`),
+
+  approve: (id: string, note?: string) =>
+    post<Transaction>(`/admin/transactions/${id}/approve`, { note }),
+
+  reject: (id: string, reason: string) =>
+    post<Transaction>(`/admin/transactions/${id}/reject`, { reason }),
+
+  auditLogs: (txId?: string) => {
+    const qs = txId ? `?txId=${txId}` : '';
+    return get<AuditLog[]>(`/admin/audit-logs${qs}`);
+  },
+};

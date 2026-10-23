@@ -3,13 +3,18 @@ import { ConfigProvider, theme } from 'antd';
 import viVN from 'antd/locale/vi_VN';
 import { AuthProvider } from './context/AuthContext';
 import MainLayout from './components/Layout/MainLayout';
+import AdminLayout from './components/Layout/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import LoginPage from './pages/Login';
 import DepositPage from './pages/Deposit';
 import WithdrawPage from './pages/Withdraw';
 import HistoryPage from './pages/History';
 import GatewayStatusPage from './pages/GatewayStatus';
 import GamePortalPage from './pages/GamePortal';
+import AdminDashboard from './pages/Admin/Dashboard';
+import TransactionReview from './pages/Admin/TransactionReview';
+import AuditLogPage from './pages/Admin/AuditLogPage';
 import './index.css';
 
 function App() {
@@ -70,7 +75,24 @@ function App() {
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
 
-            {/* Protected — wrapped in MainLayout */}
+            {/* Admin CMS — role=admin only */}
+            <Route
+              path="/admin/*"
+              element={
+                <AdminRoute>
+                  <AdminLayout>
+                    <Routes>
+                      <Route path="/"        element={<AdminDashboard />} />
+                      <Route path="/withdraw" element={<TransactionReview txType="withdraw" />} />
+                      <Route path="/deposit"  element={<TransactionReview txType="deposit" />} />
+                      <Route path="/audit"    element={<AuditLogPage />} />
+                    </Routes>
+                  </AdminLayout>
+                </AdminRoute>
+              }
+            />
+
+            {/* User portal */}
             <Route
               path="/*"
               element={

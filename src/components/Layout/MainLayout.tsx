@@ -109,6 +109,16 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     },
   ];
 
+  // Thêm link Admin nếu role = admin
+  if (user?.role === 'admin') {
+    userMenuItems.splice(userMenuItems.length - 2, 0, {
+      key: 'admin',
+      icon: <span>🛡️</span>,
+      label: <a href="/admin" style={{ color: '#ef4444', fontWeight: 600 }}>Admin CMS</a>,
+      disabled: false,
+    } as unknown as typeof userMenuItems[0]);
+  }
+
   return (
     <Layout style={{ minHeight: '100vh', background: '#0f1923' }}>
 

@@ -5,9 +5,10 @@ export interface User {
   username: string;
   fullName: string;
   email: string;
-  balance: number;       // VND
-  balanceUsdt: number;   // USDT
+  balance: number;
+  balanceUsdt: number;
   avatar: string;
+  role?: 'user' | 'admin';
 }
 
 // Mock users

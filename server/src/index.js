@@ -6,6 +6,7 @@ import authRoutes        from './routes/auth.js';
 import referenceRoutes   from './routes/reference.js';
 import transactionRoutes from './routes/transactions.js';
 import gamePortalRoutes  from './routes/gamePortal.js';
+import adminRoutes       from './routes/admin.js';
 import { startCronJobs } from './services/cronJobs.js';
 
 const app  = express();
@@ -43,6 +44,7 @@ app.use('/api/auth',         authRoutes);
 app.use('/api',              referenceRoutes);   // /banks, /crypto, /gateways, /exchange-rate
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/game-portal',  gamePortalRoutes);
+app.use('/api/admin',        adminRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {
