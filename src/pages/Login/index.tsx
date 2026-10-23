@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Button, Typography, Checkbox, Divider, message } from 'antd';
+import { Button, Typography, Checkbox, message } from 'antd';
 import {
   SafetyCertificateOutlined, EyeOutlined, EyeInvisibleOutlined,
 } from '@ant-design/icons';
@@ -48,12 +48,6 @@ const LoginPage = () => {
         setLoading(false);
       }
     }, 700);
-  };
-
-  const fillDemo = (user: string, pass: string) => {
-    setUsername(user);
-    setPassword(pass);
-    setErrors({});
   };
 
   // ── shared input style ──
@@ -298,62 +292,6 @@ const LoginPage = () => {
                 {loading ? 'Đang xác thực...' : 'Đăng nhập →'}
               </Button>
             </form>
-
-            {/* Divider */}
-            <Divider style={{ borderColor: 'rgba(255,255,255,0.07)', margin: '24px 0' }}>
-              <span style={{ color: '#3d5269', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Tài khoản thử nghiệm
-              </span>
-            </Divider>
-
-            {/* Demo cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {([
-                { user: 'demo',  pass: 'demo123',  label: 'Demo User', color: '#22c55e', icon: '👤' },
-                { user: 'admin', pass: 'admin123', label: 'Admin',     color: '#f59e0b', icon: '⚙️' },
-              ] as const).map(({ user, pass, label, color }) => (
-                <button
-                  key={user}
-                  type="button"
-                  onClick={() => fillDemo(user, pass)}
-                  style={{
-                    background: '#131f2d',
-                    border: `1.5px solid rgba(255,255,255,0.07)`,
-                    borderRadius: 10, padding: '12px',
-                    cursor: 'pointer', textAlign: 'left',
-                    transition: 'all 0.2s', fontFamily: 'inherit',
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = color;
-                    (e.currentTarget as HTMLButtonElement).style.background = `${color}0d`;
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.07)';
-                    (e.currentTarget as HTMLButtonElement).style.background = '#131f2d';
-                  }}
-                >
-                  <div style={{
-                    display: 'inline-block', marginBottom: 8,
-                    background: `${color}20`, color,
-                    borderRadius: 4, padding: '2px 8px',
-                    fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-                  }}>
-                    {label}
-                  </div>
-                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, lineHeight: 1.8 }}>
-                    <div style={{ color: '#3d5269' }}>
-                      user: <span style={{ color: '#aec6e8' }}>{user}</span>
-                    </div>
-                    <div style={{ color: '#3d5269' }}>
-                      pass: <span style={{ color: '#aec6e8' }}>{pass}</span>
-                    </div>
-                  </div>
-                  <div style={{ color: color, fontSize: 10, marginTop: 6, opacity: 0.7 }}>
-                    ↑ Click để điền tự động
-                  </div>
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Security note */}
