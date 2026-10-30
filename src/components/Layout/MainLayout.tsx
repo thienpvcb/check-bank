@@ -12,6 +12,7 @@ import {
   WalletOutlined,
   SwapOutlined,
   AppstoreOutlined,
+  CalculatorOutlined,
 } from '@ant-design/icons';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogoIcon, USDTIcon } from '../Icons';
@@ -26,12 +27,13 @@ interface MainLayoutProps {
 }
 
 const navItems = [
-  { key: '/deposit',        icon: <RiseOutlined />,      label: 'Nạp tiền',        short: 'Nạp' },
-  { key: '/withdraw',       icon: <FallOutlined />,      label: 'Rút tiền',        short: 'Rút' },
-  { key: '/history',        icon: <HistoryOutlined />,   label: 'Lịch sử',         short: 'Lịch sử' },
-  { key: '/game-portal',    icon: <AppstoreOutlined />,  label: 'Game Portal',     short: 'Game' },
-  { key: '/gateway-status', icon: <ApiOutlined />,       label: 'Trạng thái cổng', short: 'Cổng' },
-  { key: '/profile',        icon: <UserOutlined />,      label: 'Hồ sơ',           short: 'Hồ sơ' },
+  { key: '/deposit',        icon: <RiseOutlined />,       label: 'Nạp tiền',        short: 'Nạp' },
+  { key: '/withdraw',       icon: <FallOutlined />,       label: 'Rút tiền',        short: 'Rút' },
+  { key: '/history',        icon: <HistoryOutlined />,    label: 'Lịch sử',         short: 'Lịch sử' },
+  { key: '/game-portal',    icon: <AppstoreOutlined />,   label: 'Game Portal',     short: 'Game' },
+  { key: '/debt-check',     icon: <CalculatorOutlined />, label: 'Kiểm tra dư nợ', short: 'Dư nợ' },
+  { key: '/gateway-status', icon: <ApiOutlined />,        label: 'Trạng thái cổng', short: 'Cổng' },
+  { key: '/profile',        icon: <UserOutlined />,       label: 'Hồ sơ',           short: 'Hồ sơ' },
 ];
 
 const menuItems = navItems.map(({ key, icon, label }) => ({

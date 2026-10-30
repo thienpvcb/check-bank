@@ -13,6 +13,7 @@ import HistoryPage from './pages/History';
 import GatewayStatusPage from './pages/GatewayStatus';
 import GamePortalPage from './pages/GamePortal';
 import ProfilePage from './pages/Profile';
+import DebtCheckPage from './pages/DebtCheck';
 import AdminDashboard from './pages/Admin/Dashboard';
 import TransactionReview from './pages/Admin/TransactionReview';
 import AuditLogPage from './pages/Admin/AuditLogPage';
@@ -109,6 +110,7 @@ function App() {
                       <Route path="/gateway-status" element={<GatewayStatusPage />} />
                       <Route path="/game-portal"    element={<GamePortalPage />} />
                       <Route path="/profile"        element={<ProfilePage />} />
+                      <Route path="/debt-check"     element={<DebtCheckPage />} />
                     </Routes>
                   </MainLayout>
                 </ProtectedRoute>
